@@ -55,26 +55,24 @@ jobs:
           $url = "https://www.gyan.dev/ffmpeg/builds/packages/$pkg"
           $tempDir = "$env:TEMP\ffmpeg-win"
           
-          # Ensure temp directory exists
-          if (-not (Test-Path $tempDir)) {
-            New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-          }
+          # Create temp directory if it doesn't exist
+          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
           
           try {
             Write-Host "Downloading FFmpeg from gyan.dev..."
-            Invoke-WebRequest -Uri $url -OutFile "$tempDir\$pkg" -UseBasicParsing
+            Invoke-WebRequest -Uri $url -OutFile "$($tempDir)\$pkg" -UseBasicParsing
             
             # Verify download succeeded
-            if (-not (Test-Path "$tempDir\$pkg")) {
-              Write-Error "Download failed - file not created at $tempDir\$pkg"
+            if (-not (Test-Path "$($tempDir)\$pkg")) {
+              Write-Error "Download failed - file not created at $($tempDir)\$pkg"
               exit 1
             }
             
             Write-Host "Extracting archives..."
-            Expand-Archive -Path "$tempDir\$pkg" -DestinationPath $tempDir -Force
+            Expand-Archive -Path "$($tempDir)\$pkg" -DestinationPath $tempDir -Force
             
             # Find the extracted ffmpeg folder (named something like 'ffmpeg-8.1.2-essentials')
-            $binSrc = Get-ChildItem -Path "$tempDir" -Directory -Filter "ffmpeg-*" | Select-Object -First 1
+            $binSrc = Get-ChildItem -Path $tempDir -Directory -Filter "ffmpeg-*" | Select-Object -First 1
             
             if ($binSrc) {
               Write-Host "Found ffmpeg folder: $($binSrc.FullName)"
@@ -92,10 +90,10 @@ jobs:
                 exit 1
               }
               
-              Write-Host "Binary sizes - ffmpeg: $(($ffmpegSize/1MB)) MB, ffprobe: $(($ffprobeSize/1MB)) MB"
+              Write-Host "Binary sizes - ffmpeg: $($ffmpegSize/1MB) MB, ffprobe: $($ffprobeSize/1MB) MB"
             } else {
               Write-Error "Could not find extracted ffmpeg folder in temp dir"
-              Write-Error "Contents of $tempDir:"
+              Write-Error "Contents of $tempDir"
               Get-ChildItem -Path $tempDir -Force | Select-Object Name, Length
               exit 1
             }
