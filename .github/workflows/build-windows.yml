@@ -55,29 +55,54 @@ jobs:
           $url = "https://www.gyan.dev/ffmpeg/builds/packages/$pkg"
           $tempDir = "$env:TEMP\ffmpeg-win"
           
+          # Ensure temp directory exists
+          if (-not (Test-Path $tempDir)) {
+            New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+          }
+          
           try {
             Write-Host "Downloading FFmpeg from gyan.dev..."
             Invoke-WebRequest -Uri $url -OutFile "$tempDir\$pkg" -UseBasicParsing
+            
+            # Verify download succeeded
+            if (-not (Test-Path "$tempDir\$pkg")) {
+              Write-Error "Download failed - file not created at $tempDir\$pkg"
+              exit 1
+            }
+            
+            Write-Host "Extracting archives..."
             Expand-Archive -Path "$tempDir\$pkg" -DestinationPath $tempDir -Force
             
             # Find the extracted ffmpeg folder (named something like 'ffmpeg-8.1.2-essentials')
             $binSrc = Get-ChildItem -Path "$tempDir" -Directory -Filter "ffmpeg-*" | Select-Object -First 1
             
             if ($binSrc) {
+              Write-Host "Found ffmpeg folder: $($binSrc.FullName)"
+              
               Copy-Item "$($binSrc.FullName)\bin\ffmpeg.exe" "src-tauri\binaries\ffmpeg.exe" -Force
               Copy-Item "$($binSrc.FullName)\bin\ffprobe.exe" "src-tauri\binaries\ffprobe.exe" -Force
               Write-Host "FFmpeg installed successfully to src-tauri/binaries/"
               
-              # Verify files exist
-              Test-Path "src-tauri\binaries\ffmpeg.exe" | Out-Null
-              Test-Path "src-tauri\binaries\ffprobe.exe" | Out-Null
+              # Verify files exist and are valid
+              $ffmpegSize = (Get-Item "src-tauri\binaries\ffmpeg.exe").Length
+              $ffprobeSize = (Get-Item "src-tauri\binaries\ffprobe.exe").Length
+              
+              if ($ffmpegSize -lt 1MB -or $ffprobeSize -lt 1MB) {
+                Write-Error "Downloaded binaries appear corrupted or too small"
+                exit 1
+              }
+              
+              Write-Host "Binary sizes - ffmpeg: $(($ffmpegSize/1MB)) MB, ffprobe: $(($ffprobeSize/1MB)) MB"
             } else {
               Write-Error "Could not find extracted ffmpeg folder in temp dir"
+              Write-Error "Contents of $tempDir:"
+              Get-ChildItem -Path $tempDir -Force | Select-Object Name, Length
               exit 1
             }
           } catch {
             Write-Error "Failed to download FFmpeg: $_"
             Write-Error "URL tried: $url"
+            Write-Error "Temp dir: $tempDir"
             exit 1
           }
 
