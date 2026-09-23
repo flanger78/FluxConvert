@@ -51,31 +51,33 @@ jobs:
 
       - name: Download FFmpeg for Windows
         run: |
-          $ffVersion = "20250819"  # Updated version with working URL
-          $arch = "x86_64"
-          $pkg = "ffmpeg-$ffVersion-essentials_build.zip"
-          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-${ffVersion}-win64-gpl.zip"
+          $pkg = "ffmpeg-8.1.2-essentials_build.zip"
+          $url = "https://www.gyan.dev/ffmpeg/builds/packages/$pkg"
           $tempDir = "$env:TEMP\ffmpeg-win"
-          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
           
           try {
-            Write-Host "Downloading FFmpeg from GitHub releases..."
+            Write-Host "Downloading FFmpeg from gyan.dev..."
             Invoke-WebRequest -Uri $url -OutFile "$tempDir\$pkg" -UseBasicParsing
             Expand-Archive -Path "$tempDir\$pkg" -DestinationPath $tempDir -Force
             
-            # Find the extracted ffmpeg folder
+            # Find the extracted ffmpeg folder (named something like 'ffmpeg-8.1.2-essentials')
             $binSrc = Get-ChildItem -Path "$tempDir" -Directory -Filter "ffmpeg-*" | Select-Object -First 1
             
             if ($binSrc) {
               Copy-Item "$($binSrc.FullName)\bin\ffmpeg.exe" "src-tauri\binaries\ffmpeg.exe" -Force
               Copy-Item "$($binSrc.FullName)\bin\ffprobe.exe" "src-tauri\binaries\ffprobe.exe" -Force
-              Write-Host "FFmpeg installed successfully: src-tauri/binaries/ffmpeg.exe"
+              Write-Host "FFmpeg installed successfully to src-tauri/binaries/"
+              
+              # Verify files exist
+              Test-Path "src-tauri\binaries\ffmpeg.exe" | Out-Null
+              Test-Path "src-tauri\binaries\ffprobe.exe" | Out-Null
             } else {
-              Write-Error "Could not find extracted ffmpeg folder"
+              Write-Error "Could not find extracted ffmpeg folder in temp dir"
               exit 1
             }
           } catch {
             Write-Error "Failed to download FFmpeg: $_"
+            Write-Error "URL tried: $url"
             exit 1
           }
 
