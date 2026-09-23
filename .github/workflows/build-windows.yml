@@ -51,19 +51,33 @@ jobs:
 
       - name: Download FFmpeg for Windows
         run: |
-          $ffVersion = "7.1.1"
+          $ffVersion = "20250819"  # Updated version with working URL
           $arch = "x86_64"
-          $build = "20240503"
-          $pkg = "ffmpeg-$ffVersion-$arch-gpl-shared-$build.zip"
-          $url = "https://www.gyan.dev/ffmpeg/builds/$pkg"
+          $pkg = "ffmpeg-$ffVersion-essentials_build.zip"
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-${ffVersion}-win64-gpl.zip"
           $tempDir = "$env:TEMP\ffmpeg-win"
           New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-          Invoke-WebRequest -Uri $url -OutFile "$tempDir\$pkg"
-          Expand-Archive -Path "$tempDir\$pkg" -DestinationPath $tempDir -Force
-          $binSrc = Get-ChildItem -Path "$tempDir" -Directory | Where-Object { $_.Name -like "ffmpeg*" } | Select-Object -First 1
-          Copy-Item "$($binSrc.FullName)\bin\ffmpeg.exe" "src-tauri\binaries\ffmpeg.exe" -Force
-          Copy-Item "$($binSrc.FullName)\bin\ffprobe.exe" "src-tauri\binaries\ffprobe.exe" -Force
-          Write-Host "FFmpeg installed: src-tauri/binaries/ffmpeg.exe"
+          
+          try {
+            Write-Host "Downloading FFmpeg from GitHub releases..."
+            Invoke-WebRequest -Uri $url -OutFile "$tempDir\$pkg" -UseBasicParsing
+            Expand-Archive -Path "$tempDir\$pkg" -DestinationPath $tempDir -Force
+            
+            # Find the extracted ffmpeg folder
+            $binSrc = Get-ChildItem -Path "$tempDir" -Directory -Filter "ffmpeg-*" | Select-Object -First 1
+            
+            if ($binSrc) {
+              Copy-Item "$($binSrc.FullName)\bin\ffmpeg.exe" "src-tauri\binaries\ffmpeg.exe" -Force
+              Copy-Item "$($binSrc.FullName)\bin\ffprobe.exe" "src-tauri\binaries\ffprobe.exe" -Force
+              Write-Host "FFmpeg installed successfully: src-tauri/binaries/ffmpeg.exe"
+            } else {
+              Write-Error "Could not find extracted ffmpeg folder"
+              exit 1
+            }
+          } catch {
+            Write-Error "Failed to download FFmpeg: $_"
+            exit 1
+          }
 
       - name: Install Node.js dependencies
         shell: pwsh
