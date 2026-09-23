@@ -1,0 +1,127 @@
+name: Build FluxConvert - Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Visual Studio Build Tools
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download FFmpeg for Windows
+        run: |
+          $ffVersion = "7.1.1"
+          $arch = "x86_64"
+          $build = "20240503"
+          $pkg = "ffmpeg-$ffVersion-$arch-gpl-shared-$build.zip"
+          $url = "https://www.gyan.dev/ffmpeg/builds/$pkg"
+          $tempDir = "$env:TEMP\ffmpeg-win"
+          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+          Invoke-WebRequest -Uri $url -OutFile "$tempDir\$pkg"
+          Expand-Archive -Path "$tempDir\$pkg" -DestinationPath $tempDir -Force
+          $binSrc = Get-ChildItem -Path "$tempDir" -Directory | Where-Object { $_.Name -like "ffmpeg*" } | Select-Object -First 1
+          Copy-Item "$($binSrc.FullName)\bin\ffmpeg.exe" "src-tauri\binaries\ffmpeg.exe" -Force
+          Copy-Item "$($binSrc.FullName)\bin\ffprobe.exe" "src-tauri\binaries\ffprobe.exe" -Force
+          Write-Host "FFmpeg installed: src-tauri/binaries/ffmpeg.exe"
+
+      - name: Build Tauri (Windows)
+        shell: bash
+        run: |
+          source "$HOME/.cargo/env"
+          cd src-tauri
+          cargo build --release 2>&1
+        env:
+          CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: x86_64-pc-windows-msvc-gcc
+
+      - name: Tauri Build
+        uses: tauri-apps/tauri-action@v0
+        with:
+          packageManager: npm
+          tauriVersion: "2"
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fluxconvert-windows
+          path: |
+            src-tauri/target/release/bundle/exe/FluxConvert.exe
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/binaries/ffmpeg.exe
+            src-tauri/binaries/ffprobe.exe
+          retention-days: 30
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            src-tauri/target/release/bundle/exe/FluxConvert.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          body_path: src-tauri/windows/README.md
+
+  test-windows:
+    name: Test Windows Build
+    runs-on: windows-latest
+    needs: build-windows
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: fluxconvert-windows
+          path: test-build/
+
+      - name: Verify files
+        run: |
+          Write-Host "Checking build files..."
+          Test-Path test-build/FluxConvert.exe
+          Test-Path test-build/ffmpeg.exe
+          Test-Path test-build/ffprobe.exe
+
+      - name: Test FFmpeg
+        run: |
+          & .\test-build\ffmpeg.exe -version | Select-String "ffmpeg version"
+          & .\test-build\ffprobe.exe -version | Select-String "ffprobe version"

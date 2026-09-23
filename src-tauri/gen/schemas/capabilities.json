@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Permissões padrão para a janela principal do FluxConvert","local":true,"windows":["*"],"permissions":["core:default","dialog:default","dialog:allow-open","dialog:allow-save","dialog:allow-message","dialog:allow-ask","dialog:allow-confirm","shell:default","shell:allow-open"]}}
