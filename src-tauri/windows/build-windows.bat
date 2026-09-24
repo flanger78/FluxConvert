@@ -54,7 +54,7 @@ echo.
 call "%~dp0download-ffmpeg.bat"
 if %errorlevel% neq 0 (
     echo [ERRO] FFmpeg setup falhou.
-    echo Baixe manualmente de: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials_build.zip
+    echo Baixe manualmente de: https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip
     echo e extraia ffmpeg.exe e ffprobe.exe para: %~dp0..\binaries\
     pause
     exit /b 1

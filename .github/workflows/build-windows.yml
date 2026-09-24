@@ -52,8 +52,8 @@ jobs:
       - name: Download FFmpeg for Windows
         shell: pwsh
         run: |
-          $pkg = "ffmpeg-release-essentials_build.zip"
-          $url = "https://www.gyan.dev/ffmpeg/builds/$pkg"
+          $pkg = "ffmpeg-8.1.2-essentials_build.zip"
+          $url = "https://www.gyan.dev/ffmpeg/builds/packages/$pkg"
           $tempDir = "$env:TEMP\ffmpeg-win"
           $triple = "x86_64-pc-windows-msvc"
 

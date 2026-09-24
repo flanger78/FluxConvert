@@ -5,8 +5,9 @@ echo ============================================
 echo.
 
 :: FFmpeg release oficial (gyan.dev) - pacote essentials x86_64
-set "PKG=ffmpeg-release-essentials_build.zip"
-set "URL=https://www.gyan.dev/ffmpeg/builds/%PKG%"
+:: Nota: URLs "release" do gyan.dev nao existem em .zip - manter o pacote versionado
+set "PKG=ffmpeg-8.1.2-essentials_build.zip"
+set "URL=https://www.gyan.dev/ffmpeg/builds/packages/%PKG%"
 set "TEMP_DIR=%~dp0..\.ffmpeg-temp"
 set "BIN_DIR=%~dp0..\binaries"
 :: O Tauri exige o sufixo da target triple em binarios externos no Windows
