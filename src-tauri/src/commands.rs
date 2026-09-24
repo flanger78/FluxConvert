@@ -120,6 +120,14 @@ pub async fn scan_directory(app: AppHandle, dir_path: String) -> Result<FolderSc
         }
     }
 
+    // Ordena por caminho completo (ordem alfabética) — o WalkDir devolve
+    // os arquivos na ordem arbitrária do sistema de arquivos
+    found_files.sort_by(|a, b| {
+        a.path
+            .to_lowercase()
+            .cmp(&b.path.to_lowercase())
+    });
+
     let total = found_files.len();
     Ok(FolderScanResult {
         folder_name,

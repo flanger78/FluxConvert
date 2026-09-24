@@ -7,7 +7,7 @@ import { Loader2, AlertTriangle, X } from "lucide-react";
 
 import { Header } from "./components/Header";
 import DonationQR from "./components/DonationQR";
-import { DropZone } from "./components/DropZone";
+import { DropZone, DropFileEntry } from "./components/DropZone";
 import { FileList } from "./components/FileList";
 import { FormatPicker } from "./components/FormatPicker";
 import { QualityPicker } from "./components/QualityPicker";
@@ -50,6 +50,8 @@ export const App: React.FC = () => {
   const [lastOutputLocation, setLastOutputLocation] = useState<string>("");
   const [errorModalItem, setErrorModalItem] = useState<QueueItem | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const [processingDrop, setProcessingDrop] = useState<boolean>(false);
+  const [dropFiles, setDropFiles] = useState<DropFileEntry[]>([]);
 
   // Controle de colaboracao (somente Windows)
   const [isWindows, setIsWindows] = useState<boolean>(false);
@@ -93,7 +95,7 @@ export const App: React.FC = () => {
           setIsDragOver(false);
           const paths = event.payload.paths;
           if (paths && paths.length > 0) {
-            handleAddPaths(paths);
+            handleAddPathsRef.current(paths);
           }
         }
       }).then((unlisten) => {
@@ -151,9 +153,37 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleAddPathsRef = useRef<(_paths: string[]) => Promise<void>>(
+    async () => {
+      /* atribuída logo abaixo */
+    }
+  );
+
+  const makeDropEntry = (name: string, status: DropFileEntry["status"], path?: string): DropFileEntry => ({
+    id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    name,
+    path,
+    status,
+  });
+
   const handleAddPaths = async (paths: string[]) => {
     setFolderNotice(null);
-    for (const p of paths) {
+
+    // Acrescenta as novas entradas à lista existente (nunca substitui)
+    const newEntries: DropFileEntry[] = paths.map((p) =>
+      makeDropEntry(p.split(/[\\/]/).pop() || p, "processando", p)
+    );
+    setDropFiles((prev) => [...prev, ...newEntries]);
+    setProcessingDrop(true);
+
+    for (let i = 0; i < paths.length; i++) {
+      const p = paths[i];
+      const entryId = newEntries[i].id;
+      const setStatus = (status: DropFileEntry["status"]) =>
+        setDropFiles((prev) =>
+          prev.map((entry) => (entry.id === entryId ? { ...entry, status } : entry))
+        );
+
       try {
         const folderResult = await invoke<FolderScanResult>("scan_directory", { dirPath: p }).catch(() => null);
 
@@ -165,8 +195,21 @@ export const App: React.FC = () => {
               count: folderResult.total_files_found,
             });
             addMediaInfosToQueue(folderResult.media_files);
+
+            // Substitui a entrada da pasta por cada arquivo encontrado,
+            // mantendo a posição da pasta na lista
+            const newFileEntries = folderResult.media_files.map((mf) =>
+              makeDropEntry(mf.filename, "adicionado", mf.path)
+            );
+
+            setDropFiles((prev) => {
+              const idx = prev.findIndex((entry) => entry.id === entryId);
+              if (idx === -1) return [...prev, ...newFileEntries];
+              return [...prev.slice(0, idx), ...newFileEntries, ...prev.slice(idx + 1)];
+            });
           } else {
             setFolderNotice(`A pasta "${folderResult.folder_name}" não contém arquivos de áudio ou vídeo compatíveis.`);
+            setStatus("ignorado");
           }
           continue;
         }
@@ -178,12 +221,36 @@ export const App: React.FC = () => {
 
         if (fileInfo && fileInfo.is_valid) {
           addMediaInfosToQueue([fileInfo]);
+          setStatus("adicionado");
+        } else {
+          setStatus("ignorado");
         }
       } catch (err) {
         console.error("Erro ao processar caminho:", p, err);
+        setStatus("erro");
       }
     }
   };
+
+  // Remove um arquivo da lista do drop e, se ele estiver na fila, também dela
+  const handleRemoveDropFile = (id: string) => {
+    const entry = dropFiles.find((e) => e.id === id);
+    setDropFiles((prev) => prev.filter((e) => e.id !== id));
+
+    if (entry && entry.path) {
+      setQueue((prev) => {
+        const next = prev.filter((item) => item.mediaInfo.path !== entry.path);
+        setSelectedFolder((f) => (f ? { ...f, count: next.length } : null));
+        return next;
+      });
+    }
+
+    if (dropFiles.length <= 1) {
+      setProcessingDrop(false);
+    }
+  };
+
+  handleAddPathsRef.current = handleAddPaths;
 
   const addMediaInfosToQueue = (infos: MediaInfo[]) => {
     setQueue((prev) => {
@@ -296,6 +363,8 @@ export const App: React.FC = () => {
       setFolderNotice(null);
       setOverallPercent(0);
       setCurrentIndex(0);
+      setDropFiles([]);
+      setProcessingDrop(false);
     }
   };
 
@@ -557,6 +626,9 @@ export const App: React.FC = () => {
               isDragOver={isDragOver}
               setIsDragOver={setIsDragOver}
               onDropPaths={handleAddPaths}
+              processingDrop={processingDrop}
+              dropFiles={dropFiles}
+              onRemoveDropFile={handleRemoveDropFile}
             />
           ) : (
             <>
@@ -567,6 +639,9 @@ export const App: React.FC = () => {
                 isDragOver={isDragOver}
                 setIsDragOver={setIsDragOver}
                 onDropPaths={handleAddPaths}
+                processingDrop={processingDrop}
+                dropFiles={dropFiles}
+                onRemoveDropFile={handleRemoveDropFile}
               />
 
               <FileList

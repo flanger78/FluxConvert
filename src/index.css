@@ -404,6 +404,52 @@ body {
 }
 
 /* =====================================
+   LISTA DE ARQUIVOS DO DROP (arrastar)
+   ===================================== */
+.drop-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.drop-file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.drop-file-item svg {
+  flex-shrink: 0;
+}
+
+.drop-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.drop-file-status {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* =====================================
    LISTA DE ARQUIVOS
    ===================================== */
 .file-list-card {

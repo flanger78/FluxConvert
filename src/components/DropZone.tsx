@@ -1,5 +1,12 @@
 import React from "react";
-import { UploadCloud, FolderPlus, FilePlus, Sparkles } from "lucide-react";
+import { UploadCloud, FolderPlus, FilePlus, Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, X } from "lucide-react";
+
+export interface DropFileEntry {
+  id: string;
+  name: string;
+  path?: string;
+  status: "processando" | "adicionado" | "erro" | "ignorado";
+}
 
 interface DropZoneProps {
   compact?: boolean;
@@ -8,6 +15,9 @@ interface DropZoneProps {
   isDragOver: boolean;
   setIsDragOver: (over: boolean) => void;
   onDropPaths: (paths: string[]) => void;
+  processingDrop?: boolean;
+  dropFiles?: DropFileEntry[];
+  onRemoveDropFile?: (id: string) => void;
 }
 
 export const DropZone: React.FC<DropZoneProps> = ({
@@ -17,6 +27,9 @@ export const DropZone: React.FC<DropZoneProps> = ({
   isDragOver,
   setIsDragOver,
   onDropPaths,
+  processingDrop = false,
+  dropFiles = [],
+  onRemoveDropFile,
 }) => {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -105,6 +118,48 @@ export const DropZone: React.FC<DropZoneProps> = ({
             </button>
           </div>
         </div>
+
+        {processingDrop && dropFiles.length > 0 && (
+          <div
+            className="drop-file-list"
+            style={{ marginTop: "12px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "2px" }}>
+              Arquivos carregados ({dropFiles.length})
+            </div>
+            {dropFiles.map((f) => (
+              <div key={f.id} className="drop-file-item">
+                {f.status === "processando" && <Loader2 size={14} className="spin" />}
+                {f.status === "adicionado" && <CheckCircle2 size={14} style={{ color: "var(--success-color)" }} />}
+                {f.status === "erro" && <AlertCircle size={14} style={{ color: "var(--error-color)" }} />}
+                {f.status === "ignorado" && <FileText size={14} style={{ color: "var(--text-muted)" }} />}
+                <span className="drop-file-name" title={f.name}>
+                  {f.name}
+                </span>
+                <span className="drop-file-status">
+                  {f.status === "processando" && "Processando..."}
+                  {f.status === "adicionado" && "Adicionado"}
+                  {f.status === "erro" && "Erro"}
+                  {f.status === "ignorado" && "Ignorado"}
+                </span>
+                {onRemoveDropFile && (
+                  <button
+                    className="btn-remove-item"
+                    style={{ padding: "3px" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveDropFile(f.id);
+                    }}
+                    title="Remover este arquivo"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -135,6 +190,48 @@ export const DropZone: React.FC<DropZoneProps> = ({
           <span>Selecionar Pasta</span>
         </button>
       </div>
+
+      {processingDrop && dropFiles.length > 0 && (
+        <div
+          className="drop-file-list"
+          style={{ marginTop: "20px", width: "100%", maxWidth: "440px" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "8px" }}>
+            Arquivos carregados ({dropFiles.length}):
+          </div>
+          {dropFiles.map((f) => (
+            <div key={f.id} className="drop-file-item">
+              {f.status === "processando" && <Loader2 size={14} className="spin" />}
+              {f.status === "adicionado" && <CheckCircle2 size={14} style={{ color: "var(--success-color)" }} />}
+              {f.status === "erro" && <AlertCircle size={14} style={{ color: "var(--error-color)" }} />}
+              {f.status === "ignorado" && <FileText size={14} style={{ color: "var(--text-muted)" }} />}
+              <span className="drop-file-name" title={f.name}>
+                {f.name}
+              </span>
+              <span className="drop-file-status">
+                {f.status === "processando" && "Processando..."}
+                {f.status === "adicionado" && "Adicionado"}
+                {f.status === "erro" && "Erro"}
+                {f.status === "ignorado" && "Ignorado"}
+              </span>
+              {onRemoveDropFile && (
+                <button
+                  className="btn-remove-item"
+                  style={{ padding: "3px" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveDropFile(f.id);
+                  }}
+                  title="Remover este arquivo"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div
         style={{
