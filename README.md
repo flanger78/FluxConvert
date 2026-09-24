@@ -73,15 +73,17 @@ cd src-tauri && cargo test --test conversion_tests -- --nocapture
 
 # Ou manualmente
 npm install
+.\src-tauri\windows\download-ffmpeg.bat   # uma vez por máquina
 npm run tauri build
 ```
 
-### Instalador
-O build gera automaticamente `FluxConvert-Setup.msi` em `src-tauri/target/release/bundle/msi/`.
-Para instalador `.exe`, instale [NSIS](https://nsis.sourceforge.io/) e execute:
-```bash
-makensis src-tauri/windows/install.iss
-```
+### Instaladores gerados
+| Formato | Caminho |
+|---------|---------|
+| `.exe` (NSIS — recomendado p/ distribuição) | `src-tauri/target/release/bundle/nsis/*-setup.exe` |
+| `.msi` (WiX) | `src-tauri/target/release/bundle/msi/*.msi` |
+
+NSIS e WiX são baixados automaticamente pelo Tauri. Detalhes em [`src-tauri/windows/README.md`](src-tauri/windows/README.md).
 
 ### Scripts Disponíveis
 | Script | Descrição |
@@ -89,8 +91,16 @@ makensis src-tauri/windows/install.iss
 | `setup-windows.bat` | Verifica prerequisites e faz build completo |
 | `build-windows.bat` | Build com verificação de Visual Studio e FFmpeg |
 | `download-ffmpeg.bat` | Baixa binários FFmpeg x86_64 Windows |
-| `install.iss` | Script Inno Setup para instalador .exe |
+| `install.iss` | Script Inno Setup alternativo (opcional) |
 
 ### GitHub Actions
 Build automático no Windows via `.github/workflows/build-windows.yml`.
-Push na branch `main` dispara builds automáticas.
+Push na branch `main` gera os instaladores (`.exe` + `.msi`) como artifact; tags (`v*`) publicam em Releases.
+
+---
+
+## 💚 Programa de Colaboração (exclusivo Windows)
+
+- A cada **5 músicas convertidas**, o app abre o QR Code Pix lembrando a pessoa de colaborar.
+- Após colaborar (abrir o link Pix ou clicar em "Já colaborei ❤️"), o lembrete **nunca mais aparece** e o botão "Apoiar" vira o badge **"Colaborador ❤️"**.
+- No macOS o recurso permanece desativado.
