@@ -1,5 +1,5 @@
 import React from "react";
-import { Zap, Trash2, CheckCheck } from "lucide-react";
+import { Trash2, CheckCheck } from "lucide-react";
 
 interface HeaderProps {
   hasItems: boolean;
@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="app-header">
       <div className="brand">
         <div className="brand-icon">
-          <Zap size={18} color="#fff" />
+          <img src="/logo.png" alt="FluxConvert" className="brand-logo" />
         </div>
         <span className="brand-title">FluxConvert</span>
         <div className="badge-offline">

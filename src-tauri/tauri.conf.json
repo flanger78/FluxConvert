@@ -29,6 +29,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "Fabricio Langer",
+    "shortDescription": "Conversor de audio e video rapido e offline",
+    "category": "Multimedia",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -36,6 +39,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/ffmpeg.exe", "binaries/ffprobe.exe"]
+    "externalBin": ["binaries/ffmpeg", "binaries/ffprobe"],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "languages": ["PortugueseBR", "English"]
+      }
+    }
   }
 }

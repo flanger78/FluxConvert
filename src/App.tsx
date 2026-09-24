@@ -51,7 +51,33 @@ export const App: React.FC = () => {
   const [errorModalItem, setErrorModalItem] = useState<QueueItem | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
+  // Controle de colaboracao (somente Windows)
+  const [isWindows, setIsWindows] = useState<boolean>(false);
+  const [isCollaborator, setIsCollaborator] = useState<boolean>(false);
+  const [collabPromptToken, setCollabPromptToken] = useState<number>(0);
+  const promptedAtRef = useRef<number>(0);
+
   const cancelRequestedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    invoke<string>("get_platform")
+      .then((platform) => {
+        if (platform === "windows") {
+          setIsWindows(true);
+          try {
+            setIsCollaborator(localStorage.getItem("fluxconvert_collaborator") === "1");
+            promptedAtRef.current = Number(
+              localStorage.getItem("fluxconvert_prompted_at") || "0"
+            );
+          } catch {
+            /* localStorage indisponivel */
+          }
+        }
+      })
+      .catch(() => {
+        /* ambiente sem backend: recurso desativado */
+      });
+  }, []);
 
   useEffect(() => {
     let unlistenDragDrop: (() => void) | undefined;
@@ -344,6 +370,7 @@ export const App: React.FC = () => {
 
         if (result.success) {
           completedCount += 1;
+          registerSuccessfulConversion();
           setLastOutputLocation(result.output_path);
           setQueue((prev) =>
             prev.map((it, idx) =>
@@ -391,6 +418,40 @@ export const App: React.FC = () => {
     }
 
     setIsConverting(false);
+  };
+
+  // Registra cada conversao concluida e, no Windows, abre o lembrete de
+  // colaboracao a cada 5 musicas (nunca para quem ja e Colaborador).
+  const registerSuccessfulConversion = () => {
+    if (!isWindows) return;
+
+    let count = 0;
+    try {
+      if (localStorage.getItem("fluxconvert_collaborator") === "1") return;
+      count = Number(localStorage.getItem("fluxconvert_converted_count") || "0") + 1;
+      localStorage.setItem("fluxconvert_converted_count", String(count));
+    } catch {
+      return;
+    }
+
+    if (count % 5 === 0 && promptedAtRef.current !== count) {
+      promptedAtRef.current = count;
+      try {
+        localStorage.setItem("fluxconvert_prompted_at", String(count));
+      } catch {
+        /* ignora */
+      }
+      setCollabPromptToken((t) => t + 1);
+    }
+  };
+
+  const handleMarkCollaborator = () => {
+    setIsCollaborator(true);
+    try {
+      localStorage.setItem("fluxconvert_collaborator", "1");
+    } catch {
+      /* ignora */
+    }
   };
 
   const handleCancelConversion = async () => {
@@ -566,7 +627,11 @@ export const App: React.FC = () => {
         item={errorModalItem}
         onClose={() => setErrorModalItem(null)}
       />
-      <DonationQR />
+      <DonationQR
+        promptToken={collabPromptToken}
+        isCollaborator={isWindows && isCollaborator}
+        onMarkCollaborator={handleMarkCollaborator}
+      />
     </div>
   );
 };

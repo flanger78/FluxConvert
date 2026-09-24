@@ -232,6 +232,11 @@ pub async fn reset_cancel_token(state: State<'_, AppState>) -> Result<(), String
 }
 
 #[tauri::command]
+pub fn get_platform() -> String {
+    std::env::consts::OS.to_string()
+}
+
+#[tauri::command]
 pub async fn open_folder(path: String) -> Result<(), String> {
     let p = Path::new(&path);
     if !p.exists() {

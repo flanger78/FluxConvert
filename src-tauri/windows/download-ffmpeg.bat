@@ -4,15 +4,15 @@ echo   FluxConvert - Download FFmpeg Windows
 echo ============================================
 echo.
 
-set "FF_VERSION=7.1.1"
-set "ARCH=x86_64"
-set "BUILD=20240503"
-set "PKG=ffmpeg-%FF_VERSION%-%ARCH%-gpl-shared-%BUILD%.zip"
+:: FFmpeg release oficial (gyan.dev) - pacote essentials x86_64
+set "PKG=ffmpeg-release-essentials_build.zip"
 set "URL=https://www.gyan.dev/ffmpeg/builds/%PKG%"
 set "TEMP_DIR=%~dp0..\.ffmpeg-temp"
 set "BIN_DIR=%~dp0..\binaries"
+:: O Tauri exige o sufixo da target triple em binarios externos no Windows
+set "TRIPLE=x86_64-pc-windows-msvc"
 
-echo [INFO] Versao: %FF_VERSION% | Arquitetura: %ARCH%
+echo [INFO] Pacote: %PKG%
 echo [INFO] URL: %URL%
 echo.
 
@@ -23,7 +23,7 @@ if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
 :: Download
 echo [PASSO 1] Baixando FFmpeg...
 echo.
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%URL%' -OutFile '%TEMP_DIR%\%PKG%'"
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%URL%' -OutFile '%TEMP_DIR%\%PKG%' -UseBasicParsing"
 if %errorlevel% neq 0 (
     echo [ERRO] Falha ao baixar FFmpeg.
     echo Tente manualmente: %URL%
@@ -44,17 +44,24 @@ if %errorlevel% neq 0 (
 )
 echo [OK] Extracao concluida.
 
-:: Copiar binarios
+:: Copiar binarios (com e sem sufixo da triple - o Tauri usa o com sufixo,
+:: os scripts de instalacao e o fallback em runtime usam o nome simples)
 echo.
 echo [PASSO 3] Copiando binarios...
 echo.
 for /d %%d in ("%TEMP_DIR%\ffmpeg*") do (
-    copy "%%d\bin\ffmpeg.exe" "%BIN_DIR%\ffmpeg.exe" /Y
-    copy "%%d\bin\ffprobe.exe" "%BIN_DIR%\ffprobe.exe" /Y
+    if exist "%%d\bin\ffmpeg.exe" (
+        copy "%%d\bin\ffmpeg.exe" "%BIN_DIR%\ffmpeg-%TRIPLE%.exe" /Y >nul
+        copy "%%d\bin\ffmpeg.exe" "%BIN_DIR%\ffmpeg.exe" /Y >nul
+    )
+    if exist "%%d\bin\ffprobe.exe" (
+        copy "%%d\bin\ffprobe.exe" "%BIN_DIR%\ffprobe-%TRIPLE%.exe" /Y >nul
+        copy "%%d\bin\ffprobe.exe" "%BIN_DIR%\ffprobe.exe" /Y >nul
+    )
 )
 
-if exist "%BIN_DIR%\ffmpeg.exe" (
-    echo [OK] ffmpeg.exe copiado para %BIN_DIR%
+if exist "%BIN_DIR%\ffmpeg-%TRIPLE%.exe" (
+    echo [OK] ffmpeg-%TRIPLE%.exe copiado para %BIN_DIR%
 ) else (
     echo [ERRO] ffmpeg.exe nao encontrado apos extracao.
     echo Estrutura esperada: ffmpeg-xxx\bin\ffmpeg.exe
@@ -62,8 +69,8 @@ if exist "%BIN_DIR%\ffmpeg.exe" (
     exit /b 1
 )
 
-if exist "%BIN_DIR%\ffprobe.exe" (
-    echo [OK] ffprobe.exe copiado para %BIN_DIR%
+if exist "%BIN_DIR%\ffprobe-%TRIPLE%.exe" (
+    echo [OK] ffprobe-%TRIPLE%.exe copiado para %BIN_DIR%
 ) else (
     echo [ERRO] ffprobe.exe nao encontrado apos extracao.
     pause

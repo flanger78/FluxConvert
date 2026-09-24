@@ -5,8 +5,8 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use commands::{
-    cancel_conversion, convert_media_file, open_folder, probe_media, reset_cancel_token,
-    scan_directory, AppState,
+    cancel_conversion, convert_media_file, get_platform, open_folder, probe_media,
+    reset_cancel_token, scan_directory, AppState,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -23,7 +23,8 @@ pub fn run() {
             convert_media_file,
             cancel_conversion,
             reset_cancel_token,
-            open_folder
+            open_folder,
+            get_platform
         ])
         .run(tauri::generate_context!())
         .expect("erro ao executar aplicação tauri");

@@ -53,22 +53,11 @@ echo [PASSO 2] Setup dos binarios FFmpeg...
 echo.
 call "%~dp0download-ffmpeg.bat"
 if %errorlevel% neq 0 (
-    echo [AVISO] FFmpeg setup falhou, tentando alternativas...
-    echo Tentando via Homebrew (Git Bash)...
-    where brew >nul 2>&1
-    if %errorlevel% equ 0 (
-        brew install ffmpeg
-        if exist "/opt/homebrew/bin/ffmpeg" (
-            cp /opt/homebrew/bin/ffmpeg "%~dp0..\binaries\ffmpeg.exe"
-            cp /opt/homebrew/bin/ffprobe "%~dp0..\binaries\ffprobe.exe"
-            echo [OK] FFmpeg copiado via Homebrew
-        )
-    ) else (
-        echo [ERRO] Nao foi possivel obter FFmpeg.
-        echo Baixe manualmente de: https://gyan.dev/ffmpeg/builds/
-        pause
-        exit /b 1
-    )
+    echo [ERRO] FFmpeg setup falhou.
+    echo Baixe manualmente de: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials_build.zip
+    echo e extraia ffmpeg.exe e ffprobe.exe para: %~dp0..\binaries\
+    pause
+    exit /b 1
 )
 
 :: ==================================================
@@ -86,11 +75,12 @@ if %errorlevel% neq 0 (
 echo [OK] Dependencias instaladas
 
 :: ==================================================
-:: PASSO 4: Build Tauri (Release)
+:: PASSO 4: Build Tauri (Release + Instaladores)
 :: ==================================================
 echo.
 echo [PASSO 4] Buildando FluxConvert (Release)...
 echo Isso pode levar 10-20 minutos na primeira vez.
+echo O Tauri baixa automaticamente NSIS e WiX para os instaladores.
 echo.
 
 call npm run tauri build
@@ -101,41 +91,14 @@ if %errorlevel% neq 0 (
     echo Solucoes comuns:
     echo 1. rustup update
     echo 2. Verificar Visual Studio Build Tools
-    echo 3. Verificar binarios FFmpeg
+    echo 3. Verificar binarios FFmpeg (download-ffmpeg.bat)
     echo 4. Executar: npm run tauri dev (para debug)
     pause
     exit /b 1
 )
 
 :: ==================================================
-:: PASSO 5: Gerar instalador .exe (opcional)
-:: ==================================================
-echo.
-echo [PASSO 5] Gerando instalador Windows...
-echo.
-
-:: Verificar se NSIS esta instalado
-where makensis >nul 2>&1
-if %errorlevel% equ 0 (
-    echo NSIS encontrado. Gerando instalador...
-    pushd "%~dp0"
-    makensis install.iss
-    popd
-    if exist "output\FluxConvert-Setup.exe" (
-        echo [OK] Instalador gerado: output\FluxConvert-Setup.exe
-    ) else (
-        echo [AVISO] NSIS executado mas instalador nao encontrado.
-        echo O .msi terao tambem disponivel em:
-        dir /s /b "..\target\release\bundle\msi\*" 2>nul
-    )
-) else (
-    echo NSIS nao encontrado. O .msi sera gerado automaticamente pelo Tauri.
-    echo Para instalador .exe com NSIS:
-    echo   1. Baixar NSIS: https://jrsoftware.org/isdl.php
-    echo   2. Instalar NSIS
-    echo   3. Executar: makensis install.iss
-)
-
+:: CONCLUSAO
 :: ==================================================
 echo.
 echo ============================================
@@ -144,17 +107,16 @@ echo ============================================
 echo.
 echo Arquivos gerados:
 echo.
-echo [APP] FluxConvert.exe:
-dir /s /b "..\target\release\bundle\exe\FluxConvert.exe" 2>nul
+echo [EXE] Instalador NSIS (.exe):
+dir /s /b "%~dp0..\target\release\bundle\nsis\*.exe" 2>nul
 echo.
 echo [MSI] Instalador (.msi):
-dir /s /b "..\target\release\bundle\msi\*.msi" 2>nul
+dir /s /b "%~dp0..\target\release\bundle\msi\*.msi" 2>nul
 echo.
-echo [EXE] Instalador (.exe - se NSIS instalado):
-dir /s /b "output\FluxConvert-Setup.exe" 2>nul
+echo [APP] Executavel solto:
+dir /s /b "%~dp0..\target\release\fluxconvert.exe" 2>nul
 echo.
-echo Para instalar no seu PC:
-echo   - Execute o .msi ou .exe gerado
-echo   - Ou copie a pasta "binaries\" para a pasta do app
+echo Para distribuir: envie o .exe (NSIS) ou .msi da pasta bundle.
+echo O instalador ja inclui FFmpeg, atalhos e atualizacao do WebView2.
 echo.
 pause

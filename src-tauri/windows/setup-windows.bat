@@ -115,13 +115,13 @@ echo ============================================
 echo.
 echo Arquivos gerados:
 echo.
-echo [APP] FluxConvert.exe:
-dir /s /b "%~dp0..\target\release\bundle\exe\FluxConvert.exe" 2>nul
+echo [EXE] Instalador NSIS (.exe):
+dir /s /b "%~dp0..\target\release\bundle\nsis\*.exe" 2>nul
 echo.
 echo [MSI] Instalador (.msi):
 dir /s /b "%~dp0..\target\release\bundle\msi\*.msi" 2>nul
 echo.
-echo Para instalar no seu PC:
-echo   - Execute o .msi gerado
+echo Para distribuir:
+echo   - Envie o .exe (NSIS) ou .msi gerado
 echo.
 pause

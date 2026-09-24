@@ -105,6 +105,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .brand-title {
@@ -917,6 +926,58 @@ body {
 
 .donation-fab-text {
   white-space: nowrap;
+}
+
+/* Badge de Colaborador (Windows): substitui o botao apos a colaboracao */
+.collab-badge {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.2);
+  transition: all 0.3s ease;
+}
+
+.collab-badge:hover {
+  transform: translateY(-2px);
+  background: rgba(34, 197, 94, 0.25);
+  box-shadow: 0 6px 22px rgba(34, 197, 94, 0.3);
+}
+
+/* Botao "Ja colaborei" no modal */
+.btn-mark-collab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-mark-collab:hover {
+  background: rgba(34, 197, 94, 0.22);
+  transform: translateY(-1px);
 }
 
 @keyframes donation-pulse {
