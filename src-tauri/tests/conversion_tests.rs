@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use fluxconvert_lib::ffmpeg::collision::get_unique_output_path;
-use fluxconvert_lib::ffmpeg::presets::{build_ffmpeg_args, ConversionOptions};
+use fluxconvert_lib::ffmpeg::presets::{build_ffmpeg_args, ConversionOptions, SourceMedia};
 use fluxconvert_lib::ffmpeg::probe::probe_file;
 use fluxconvert_lib::ffmpeg::runner::run_conversion;
 
@@ -87,6 +87,35 @@ fn create_sample_files(dir: &Path, ffmpeg: &Path) {
             .unwrap();
         assert!(status.success());
     }
+
+    // 5. MP3 com capa do álbum embutida (cover art)
+    let cover_file = dir.join("sample_cover.png");
+    if !cover_file.exists() {
+        let status = Command::new(ffmpeg)
+            .args(&["-y", "-f", "lavfi", "-i", "color=c=red:s=300x300:d=1", "-frames:v", "1"])
+            .arg(&cover_file)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    }
+
+    let mp3_cover_file = dir.join("sample_cover.mp3");
+    if !mp3_cover_file.exists() {
+        let status = Command::new(ffmpeg)
+            .args(&[
+                "-y", "-i", mp3_file.to_str().unwrap(),
+                "-i", cover_file.to_str().unwrap(),
+                "-map", "0:a", "-map", "1:v",
+                "-c:a", "copy", "-c:v", "mjpeg",
+                "-id3v2_version", "3",
+                "-metadata:s:v", "title=Album cover",
+                "-metadata:s:v", "comment=Cover (front)",
+            ])
+            .arg(&mp3_cover_file)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    }
 }
 
 #[test]
@@ -117,7 +146,7 @@ fn test_all_conversion_flows() {
         quality: Some("320".to_string()),
         extract_audio_only: false,
     };
-    let args = build_ffmpeg_args(&options, info.has_video);
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info));
     let out_path = get_unique_output_path(&out_dir, "test_wav_to_mp3", &args.output_extension);
     let token = Arc::new(AtomicBool::new(false));
     let mut last_percent = 0.0;
@@ -144,7 +173,7 @@ fn test_all_conversion_flows() {
         quality: None,
         extract_audio_only: false,
     };
-    let args = build_ffmpeg_args(&options, info.has_video);
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info));
     let out_path = get_unique_output_path(&out_dir, "test_wav_to_flac", &args.output_extension);
     let token = Arc::new(AtomicBool::new(false));
     let res = run_conversion(
@@ -167,7 +196,7 @@ fn test_all_conversion_flows() {
         quality: Some("24bit".to_string()),
         extract_audio_only: false,
     };
-    let args = build_ffmpeg_args(&options, info_mp3.has_video);
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info_mp3));
     let out_path = get_unique_output_path(&out_dir, "test_mp3_to_wav", &args.output_extension);
     let token = Arc::new(AtomicBool::new(false));
     let res = run_conversion(
@@ -191,7 +220,7 @@ fn test_all_conversion_flows() {
         quality: Some("balanced".to_string()),
         extract_audio_only: false,
     };
-    let args = build_ffmpeg_args(&options, info_mov.has_video);
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info_mov));
     let out_path = get_unique_output_path(&out_dir, "test_mov_to_mp4", &args.output_extension);
     let token = Arc::new(AtomicBool::new(false));
     let res = run_conversion(
@@ -213,7 +242,7 @@ fn test_all_conversion_flows() {
         quality: Some("320".to_string()),
         extract_audio_only: true,
     };
-    let args = build_ffmpeg_args(&options, info_mov.has_video);
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info_mov));
     let out_path = get_unique_output_path(&out_dir, "test_mov_to_mp3", &args.output_extension);
     let token = Arc::new(AtomicBool::new(false));
     let res = run_conversion(
@@ -239,7 +268,7 @@ fn test_all_conversion_flows() {
         quality: Some("256".to_string()),
         extract_audio_only: true,
     };
-    let args = build_ffmpeg_args(&options, info_mp4.has_video);
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info_mp4));
     let out_path = get_unique_output_path(&out_dir, "test_mp4_to_mp3", &args.output_extension);
     let token = Arc::new(AtomicBool::new(false));
     let res = run_conversion(
@@ -261,7 +290,7 @@ fn test_all_conversion_flows() {
         quality: Some("balanced".to_string()),
         extract_audio_only: false,
     };
-    let args = build_ffmpeg_args(&options, info_mp4.has_video);
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info_mp4));
     let out_path = get_unique_output_path(&out_dir, "test_mp4_to_mov", &args.output_extension);
     let token = Arc::new(AtomicBool::new(false));
     let res = run_conversion(
@@ -298,7 +327,7 @@ fn test_all_conversion_flows() {
             quality: Some("320".to_string()),
             extract_audio_only: false,
         };
-        let bargs = build_ffmpeg_args(&opt, false);
+        let bargs = build_ffmpeg_args(&opt, &SourceMedia::default());
         let res = run_conversion(&ffmpeg, &input_wav, &out_mp3, 2.0, &bargs.args, token, |_| {});
         assert!(res.is_ok());
         assert!(out_mp3.exists());
@@ -313,7 +342,7 @@ fn test_all_conversion_flows() {
         quality: Some("320".to_string()),
         extract_audio_only: false,
     };
-    let bargs = build_ffmpeg_args(&opt, false);
+    let bargs = build_ffmpeg_args(&opt, &SourceMedia::default());
     let res = run_conversion(&ffmpeg, &wav_sample, &cancel_out, 2.0, &bargs.args, cancel_token, |_| {});
     assert!(res.is_err());
     assert!(!cancel_out.exists(), "Arquivo cancelado não deve permanecer no disco");
@@ -341,5 +370,83 @@ fn test_all_conversion_flows() {
     }
     assert!(scanned_count >= 5, "Varredura deve ter encontrado pelo menos 5 arquivos de mídia válidos");
 
-    println!("TODOS OS 11 FLUXOS DE TESTE PASSARAM COM SUCESSO!");
+    // Fluxo 12: MP3 (só áudio) -> MP4 (vídeo gerado com fundo sólido)
+    println!("Testando MP3 -> MP4 (vídeo gerado a partir do áudio)...");
+    let info_audio_only = probe_file(&ffprobe, &mp3_sample).unwrap();
+    assert!(info_audio_only.has_audio);
+    assert!(!info_audio_only.has_video);
+    let options = ConversionOptions {
+        target_format: "mp4".to_string(),
+        quality: Some("balanced".to_string()),
+        extract_audio_only: false,
+    };
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info_audio_only));
+    let out_path = get_unique_output_path(&out_dir, "test_mp3_to_mp4", &args.output_extension);
+    let token = Arc::new(AtomicBool::new(false));
+    let res = run_conversion(
+        &ffmpeg,
+        &mp3_sample,
+        &out_path,
+        info_audio_only.duration_seconds,
+        &args.args,
+        token,
+        |_| {},
+    );
+    assert!(res.is_ok(), "Conversão de música para vídeo deve funcionar: {:?}", res.err());
+    let probed_generated = probe_file(&ffprobe, &out_path).unwrap();
+    assert!(probed_generated.has_video, "A saída deve conter um stream de vídeo");
+    assert!(probed_generated.has_audio, "A saída deve manter o áudio");
+
+    // Fluxo 13: MP3 com capa -> MP4 (vídeo gerado a partir da capa do álbum)
+    println!("Testando MP3 com capa -> MP4 (vídeo gerado a partir da capa)...");
+    let mp3_cover_sample = test_dir.join("sample_cover.mp3");
+    let info_cover = probe_file(&ffprobe, &mp3_cover_sample).unwrap();
+    assert!(info_cover.has_audio);
+    assert!(info_cover.has_cover, "A capa do álbum deve ser detectada");
+    assert!(!info_cover.has_video, "Capa não deve contar como vídeo real");
+    let options = ConversionOptions {
+        target_format: "mp4".to_string(),
+        quality: Some("high".to_string()),
+        extract_audio_only: false,
+    };
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info_cover));
+    let out_path = get_unique_output_path(&out_dir, "test_cover_to_mp4", &args.output_extension);
+    let token = Arc::new(AtomicBool::new(false));
+    let res = run_conversion(
+        &ffmpeg,
+        &mp3_cover_sample,
+        &out_path,
+        info_cover.duration_seconds,
+        &args.args,
+        token,
+        |_| {},
+    );
+    assert!(res.is_ok(), "Conversão com capa deve funcionar: {:?}", res.err());
+    let probed_cover_out = probe_file(&ffprobe, &out_path).unwrap();
+    assert!(probed_cover_out.has_video, "A saída deve conter um stream de vídeo");
+    assert!(probed_cover_out.has_audio, "A saída deve manter o áudio");
+
+    // Fluxo 14: MP3 com capa -> M4A (capa removida; antes o FFmpeg falhava)
+    println!("Testando MP3 com capa -> M4A...");
+    let options = ConversionOptions {
+        target_format: "m4a".to_string(),
+        quality: Some("256".to_string()),
+        extract_audio_only: false,
+    };
+    let args = build_ffmpeg_args(&options, &SourceMedia::from(&info_cover));
+    let out_path = get_unique_output_path(&out_dir, "test_cover_to_m4a", &args.output_extension);
+    let token = Arc::new(AtomicBool::new(false));
+    let res = run_conversion(
+        &ffmpeg,
+        &mp3_cover_sample,
+        &out_path,
+        info_cover.duration_seconds,
+        &args.args,
+        token,
+        |_| {},
+    );
+    assert!(res.is_ok(), "MP3 com capa deve converter para M4A: {:?}", res.err());
+    assert!(out_path.exists());
+
+    println!("TODOS OS 14 FLUXOS DE TESTE PASSARAM COM SUCESSO!");
 }

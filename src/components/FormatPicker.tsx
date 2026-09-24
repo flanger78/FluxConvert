@@ -38,8 +38,10 @@ export const FormatPicker: React.FC<FormatPickerProps> = ({
   extractAudioOnly: _extractAudioOnly,
   setExtractAudioOnly,
 }) => {
-  // Se a fila tiver APENAS áudio, não faz sentido mostrar abas de vídeo
-  const showVideoOption = hasVideoInQueue || (!hasAudioInQueue && !hasVideoInQueue);
+  // Abas Áudio/Vídeo ficam sempre disponíveis: qualquer arquivo (música ou
+  // vídeo) pode ser convertido para qualquer formato escolhido. Quando a fila
+  // é só áudio e o usuário escolhe vídeo, um stream de vídeo é gerado.
+  const generatingVideoFromAudio = !hasVideoInQueue && hasAudioInQueue && activeCategory === "video";
 
   return (
     <div className="settings-card">
@@ -66,45 +68,61 @@ export const FormatPicker: React.FC<FormatPickerProps> = ({
             <span>Extração de Áudio Ativa</span>
           </span>
         )}
+
+        {generatingVideoFromAudio && (
+          <span
+            style={{
+              fontSize: "0.72rem",
+              background: "rgba(16, 185, 129, 0.15)",
+              color: "#6ee7b7",
+              padding: "2px 8px",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <Video size={11} />
+            <span>Vídeo gerado a partir do áudio</span>
+          </span>
+        )}
       </div>
 
-      {showVideoOption && (
-        <div className="format-tabs">
-          <button
-            type="button"
-            className={`format-tab-btn ${activeCategory === "audio" ? "active" : ""}`}
-            onClick={() => {
-              setActiveCategory("audio");
-              setExtractAudioOnly(hasVideoInQueue);
-              if (!AUDIO_FORMATS.some((f) => f.id === selectedFormat)) {
-                onSelectFormat("mp3");
-              }
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-              <Music size={13} />
-              <span>{hasVideoInQueue ? "Áudio (Extrair)" : "Áudio"}</span>
-            </div>
-          </button>
+      <div className="format-tabs">
+        <button
+          type="button"
+          className={`format-tab-btn ${activeCategory === "audio" ? "active" : ""}`}
+          onClick={() => {
+            setActiveCategory("audio");
+            setExtractAudioOnly(hasVideoInQueue);
+            if (!AUDIO_FORMATS.some((f) => f.id === selectedFormat)) {
+              onSelectFormat("mp3");
+            }
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+            <Music size={13} />
+            <span>{hasVideoInQueue ? "Áudio (Extrair)" : "Áudio"}</span>
+          </div>
+        </button>
 
-          <button
-            type="button"
-            className={`format-tab-btn ${activeCategory === "video" ? "active" : ""}`}
-            onClick={() => {
-              setActiveCategory("video");
-              setExtractAudioOnly(false);
-              if (!VIDEO_FORMATS.some((f) => f.id === selectedFormat)) {
-                onSelectFormat("mp4");
-              }
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-              <Video size={13} />
-              <span>Vídeo</span>
-            </div>
-          </button>
-        </div>
-      )}
+        <button
+          type="button"
+          className={`format-tab-btn ${activeCategory === "video" ? "active" : ""}`}
+          onClick={() => {
+            setActiveCategory("video");
+            setExtractAudioOnly(false);
+            if (!VIDEO_FORMATS.some((f) => f.id === selectedFormat)) {
+              onSelectFormat("mp4");
+            }
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+            <Video size={13} />
+            <span>Vídeo</span>
+          </div>
+        </button>
+      </div>
 
       <div className="format-pills">
         {activeCategory === "audio"

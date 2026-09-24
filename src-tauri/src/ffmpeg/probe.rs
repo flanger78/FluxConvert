@@ -13,6 +13,10 @@ pub struct MediaInfo {
     pub formatted_size: String,
     pub has_audio: bool,
     pub has_video: bool,
+    /// Imagem estática embutida no arquivo (capa do álbum / cover art)
+    pub has_cover: bool,
+    pub cover_width: Option<u32>,
+    pub cover_height: Option<u32>,
     pub audio_codec: Option<String>,
     pub video_codec: Option<String>,
     pub width: Option<u32>,
@@ -33,6 +37,12 @@ struct FFprobeStream {
     width: Option<u32>,
     height: Option<u32>,
     duration: Option<String>,
+    disposition: Option<FFprobeDisposition>,
+}
+
+#[derive(Deserialize)]
+struct FFprobeDisposition {
+    attached_pic: Option<i32>,
 }
 
 #[allow(dead_code)]
@@ -113,10 +123,13 @@ pub fn probe_file(ffprobe_path: &Path, file_path: &Path) -> Result<MediaInfo, St
 
     let mut has_audio = false;
     let mut has_video = false;
+    let mut has_cover = false;
     let mut audio_codec = None;
     let mut video_codec = None;
     let mut width = None;
     let mut height = None;
+    let mut cover_width = None;
+    let mut cover_height = None;
     let mut stream_duration = 0.0;
 
     if let Some(streams) = parsed.streams {
@@ -136,15 +149,40 @@ pub fn probe_file(ffprobe_path: &Path, file_path: &Path) -> Result<MediaInfo, St
                     }
                 }
                 Some("video") => {
-                    // Ignora capas embutidas tipo mjpeg/png se for apenas uma imagem estática
-                    if s.codec_name.as_deref() != Some("png") && s.codec_name.as_deref() != Some("mjpeg") {
+                    let codec_name = s.codec_name.as_deref();
+                    let attached_pic = s
+                        .disposition
+                        .as_ref()
+                        .and_then(|d| d.attached_pic)
+                        .unwrap_or(0)
+                        == 1;
+
+                    // Capa/arte embutida (imagem estática): não é um vídeo de verdade
+                    let is_still_image =
+                        attached_pic || matches!(codec_name, Some("png") | Some("mjpeg"));
+
+                    if is_still_image {
+                        has_cover = true;
+                        if cover_width.is_none() {
+                            cover_width = s.width;
+                            cover_height = s.height;
+                        }
+                        if video_codec.is_none() {
+                            video_codec = s.codec_name;
+                        }
+                        if width.is_none() {
+                            width = s.width;
+                            height = s.height;
+                        }
+                    } else {
                         has_video = true;
+                        if video_codec.is_none() {
+                            video_codec = s.codec_name;
+                        }
+                        width = s.width;
+                        height = s.height;
                     }
-                    if video_codec.is_none() {
-                        video_codec = s.codec_name;
-                    }
-                    width = s.width;
-                    height = s.height;
+
                     if let Some(dur_str) = s.duration {
                         if let Ok(d) = dur_str.parse::<f64>() {
                             if d > stream_duration {
@@ -179,6 +217,9 @@ pub fn probe_file(ffprobe_path: &Path, file_path: &Path) -> Result<MediaInfo, St
         formatted_size: format_file_size(file_size),
         has_audio,
         has_video,
+        has_cover,
+        cover_width,
+        cover_height,
         audio_codec,
         video_codec,
         width,

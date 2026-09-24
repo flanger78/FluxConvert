@@ -133,6 +133,27 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Mantém a fila exibindo o formato/qualidade que o usuário escolheu agora
+  useEffect(() => {
+    if (isConverting) return;
+    setQueue((prev) => {
+      if (prev.length === 0) return prev;
+      const changed = prev.some(
+        (item) =>
+          item.targetFormat !== targetFormat ||
+          item.quality !== quality ||
+          item.extractAudio !== extractAudioOnly
+      );
+      if (!changed) return prev;
+      return prev.map((item) => ({
+        ...item,
+        targetFormat,
+        quality,
+        extractAudio: extractAudioOnly,
+      }));
+    });
+  }, [targetFormat, quality, extractAudioOnly, isConverting]);
+
   const handleSelectFormat = (newFormat: string) => {
     setTargetFormat(newFormat);
     const fmt = newFormat.toLowerCase();
@@ -277,15 +298,8 @@ export const App: React.FC = () => {
 
       setSelectedFolder((f) => (f ? { ...f, count: combined.length } : null));
 
-      const hasAnyVideo = combined.some((i) => i.mediaInfo.has_video);
-      const hasOnlyAudio = !hasAnyVideo && combined.every((i) => i.mediaInfo.has_audio);
-
-      if (hasOnlyAudio && activeCategory === "video") {
-        setActiveCategory("audio");
-        setTargetFormat("mp3");
-        setQuality("320");
-      }
-
+      // Categoria e formato escolhidos pelo usuário são mantidos: qualquer
+      // arquivo (música ou vídeo) pode ir para qualquer formato de saída.
       return combined;
     });
   };

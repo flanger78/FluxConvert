@@ -8,6 +8,10 @@ export interface MediaInfo {
   formatted_size: string;
   has_audio: boolean;
   has_video: boolean;
+  /** Imagem estática embutida (capa do álbum) */
+  has_cover?: boolean;
+  cover_width?: number;
+  cover_height?: number;
   audio_codec?: string;
   video_codec?: string;
   width?: number;

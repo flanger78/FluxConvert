@@ -5,7 +5,7 @@ use tauri::{AppHandle, Emitter, State};
 use walkdir::WalkDir;
 
 use crate::ffmpeg::collision::get_unique_output_path;
-use crate::ffmpeg::presets::{build_ffmpeg_args, ConversionOptions};
+use crate::ffmpeg::presets::{build_ffmpeg_args, ConversionOptions, SourceMedia};
 use crate::ffmpeg::probe::{probe_file, MediaInfo};
 use crate::ffmpeg::resolve_binary_path;
 use crate::ffmpeg::runner::run_conversion;
@@ -109,6 +109,9 @@ pub async fn scan_directory(app: AppHandle, dir_path: String) -> Result<FolderSc
                         formatted_size: crate::ffmpeg::probe::format_file_size(file_size),
                         has_audio: is_audio,
                         has_video: !is_audio,
+                        has_cover: false,
+                        cover_width: None,
+                        cover_height: None,
                         audio_codec: None,
                         video_codec: None,
                         width: None,
@@ -162,7 +165,7 @@ pub async fn convert_media_file(
     })?;
 
     // Determinar argumentos de conversão
-    let ffmpeg_args = build_ffmpeg_args(&request.options, media_info.has_video);
+    let ffmpeg_args = build_ffmpeg_args(&request.options, &SourceMedia::from(&media_info));
 
     // Determinar diretório de saída
     let target_dir = match &request.custom_output_dir {
